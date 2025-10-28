@@ -110,6 +110,7 @@ static readonly HashSet<string> NEGATIVE = new(StringComparer.OrdinalIgnoreCase)
 
 | Code           | Bedeutung          |
 |----------------|--------------------|
+| `B_MISSED`     | Unbekannt          |
 | `C_PING`       | Ping-Call          |
 | `D_POLL`       | Umfrage            |
 | `E_ADVERTISING`| Werbung            |
