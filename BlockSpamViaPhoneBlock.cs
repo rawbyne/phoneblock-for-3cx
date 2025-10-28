@@ -55,7 +55,7 @@ namespace phoneblock_block
         // Bewertungs-Codes, die als "negativ" gewertet werden (phoneblock Kategorien)
         // C_PING=Ping-Call, D_POLL=Umfrage, E_ADVERTISING=Werbung, F_GAMBLE=Glücksspiel, G_FRAUD=Betrug
         static readonly HashSet<string> NEGATIVE = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        { "C_PING","D_POLL","E_ADVERTISING","F_GAMBLE","G_FRAUD" };
+        { "B_MISSED","C_PING","D_POLL","E_ADVERTISING","F_GAMBLE","G_FRAUD" };
 
         // Haupteinstieg: wird pro Call aufgerufen
         public override async Task<bool> StartAsync()
