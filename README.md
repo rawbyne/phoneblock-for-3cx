@@ -166,7 +166,6 @@ Passe die Liste nach Bedarf an.
 }
 
 ---
----
 
 ## 📄 Logging
 
