@@ -164,8 +164,7 @@ Passe die Liste nach Bedarf an.
   "did": "+4959123456",
   "ts": "2025-01-01T12:34:56.789Z"
 }
-
----
+```
 
 ## 📄 Logging
 
@@ -195,9 +194,6 @@ Nein. Es setzt dann den Flow normal fort und kann optional benachrichtigen (`sta
 **Was passiert, wenn die API nicht erreichbar ist?**  
 Der Anruf wird **nicht** blockiert; der Flow geht weiter. Optional erfolgt eine Benachrichtigung (`lookup_failed`).
 
-**Kann ich andere Kategorien als negativ definieren?**  
-Ja. Ergänze/ändere die `NEGATIVE`-Liste.
-
 ---
 
 ## 🤝 Beitrag & Support
@@ -206,27 +202,9 @@ Issues und PRs sind willkommen. Bitte bei Bugs reproduzierbare Schritte, Logs (o
 
 ---
 
-## 📜 Lizenz
-
-Wähle eine passende Lizenz für dein Projekt (z. B. **MIT**).  
-Beispiel: https://choosealicense.com/licenses/mit/
-
----
-
 ## ⚠️ Disclaimer
 
 Dieses Script wird ohne Gewähr bereitgestellt. Prüfe die rechtlichen Rahmenbedingungen (Rufnummern-Blockierung, Datenschutz) in deinem Land und deiner Umgebung.
-
----
-
-## 📁 Dateistruktur (Vorschlag)
-
-```
-.
-├── README.md
-├── BlockSpamViaPhoneBlock.cs
-└── .editorconfig / .gitignore (optional)
-```
 
 ---
 
