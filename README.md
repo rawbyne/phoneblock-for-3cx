@@ -26,11 +26,11 @@ sequenceDiagram
 
     PBX->>PBX: CLI & DID aus dem Call lesen
     PBX->>PBX: Nummer zu E.164 normalisieren
-    Prüfung Inbound & Nummer vorhanden
+    alt Inbound & Nummer vorhanden
         PBX->>PB: GET /num/+49... (Bearer)
         PB-->>PBX: { votes, rating, ... }
         PBX->>PBX: isBlocklisted = votes >= MIN_VOTES && NEGATIVE.Contains(rating)
-        Blockieren isBlocklisted
+        alt isBlocklisted
             PBX->>PBX: RouteTo("EndCall.")
             PBX-->>DC: state="blocked" (optional)
         else erlaubt
