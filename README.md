@@ -164,26 +164,8 @@ Passe die Liste nach Bedarf an.
   "did": "+4959123456",
   "ts": "2025-01-01T12:34:56.789Z"
 }
-```
 
 ---
-
-## 🧪 Testen
-
-- **Trockenlauf** ohne Sperre: `MIN_VOTES` hochsetzen oder `NEGATIVE` leeren.  
-- **Simulierter Treffer**: `MIN_VOTES` auf `1` setzen und eine Nummer mit bekannten Negativ-Votes anrufen.  
-- **Offline-Test**: In `LookupAsync` temporär eine feste Response zurückgeben (nur zu Testzwecken!).
-
----
-
-## 🧰 Erweiterungen / TODO
-
-- [ ] JSON-Parsing auf `System.Text.Json` umstellen (anstatt Regex)  
-- [ ] Rate-Limit/Retry-Strategie ergänzen  
-- [ ] Konfiguration aus Datei/Umgebung lesen  
-- [ ] Mehr Webhook-Formate (Slack, Teams, Mattermost)  
-- [ ] Unit-Tests für Normalisierung (`NormalizeToE164`)  
-
 ---
 
 ## 📄 Logging
