@@ -1,4 +1,3 @@
-# phoneblock-for-3cx
 # Phoneblock für 3CX v20
 
 > Prüft eingehende Anrufe in 3CX v20 gegen die **phoneblock.net**-API und blockiert Spam automatisch. Optional werden Ereignisse per **Discord**- oder **Generic JSON Webhook** gemeldet.
