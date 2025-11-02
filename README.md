@@ -1,13 +1,13 @@
 # Phoneblock für 3CX v20
 
-> Prüft eingehende Anrufe in 3CX v20 gegen die **phoneblock.net**-API und blockiert Spam automatisch. Optional werden Ereignisse per **Discord**- oder **Generic JSON Webhook** gemeldet.
+Prüft eingehende Anrufe in 3CX v20 gegen die [phoneblock.net](https://phoneblock.net)-API und blockiert Spam automatisch. Optional werden Ereignisse per **Discord**- oder **Generic JSON Webhook** gemeldet.
 
 ---
 
 ## ✨ Features
 
 - ✅ E.164-Normalisierung eingehender CLI (z. B. `+49123456789`)
-- ✅ Lookup bei `phoneblock.net` mit Bearer-Token
+- ✅ Lookup bei [phoneblock.net](https://phoneblock.net) mit Bearer-Token (siehe auch Projekt [PhoneBlock](https://github.com/haumacher/phoneblock))
 - ✅ Blockiert Anrufe ab konfigurierbarem Mindest-Stimmenwert und negativer Bewertung
 - ✅ Optionale Benachrichtigung per Discord-Webhook und generischem JSON-Webhook
 - ✅ Konservatives HTTP-Timeout, defensives Logging, kein Leaken von Secrets
