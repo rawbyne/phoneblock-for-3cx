@@ -21,8 +21,7 @@ using TCX.PBXAPI;
 //    - API-Token und Webhook-URLs sind ANONYMISIERT und müssen durch eigene
 //      Werte ersetzt werden.
 //    - Logging ist bewusst zurückhaltend; passe es bei Bedarf an.
-//    - JSON wird minimal via Regex geparst (API-Response ist klein). Für
-//      Robustheit könntest du auf System.Text.Json umstellen (TODO-Hinweis).
+//    - JSON wird minimal via Regex geparst (API-Response ist klein).
 //
 //  Konfiguration:
 //    - BEARER:   Dein phoneblock.net API-Token (Bearer Token)
@@ -31,7 +30,7 @@ using TCX.PBXAPI;
 //    - DISCORD_WEBHOOK / GENERIC_WEBHOOK: leer lassen, wenn nicht genutzt
 //    - HTTP_TIMEOUT_SEC: HTTP-Timeout für API/Webhooks
 //
-//  Tested with: 3CX v20 ScriptBase<T>, .NET kompatible Umgebung
+//  Tested with: 3CX v20 ScriptBase<T>, .NET-kompatible Umgebung
 // ----------------------------------------------------------------------------
 namespace phoneblock_block
 {
@@ -40,7 +39,7 @@ namespace phoneblock_block
         // Basis-URL der phoneblock.net API
         const string API_BASE = "https://phoneblock.net/phoneblock/api";
 
-        // >>> ANONYMISIERTER PLATZHALTER: HIER DEIN EIGENES TOKEN EINTRAGEN <<<
+        // >>> ANONYMISIERT: HIER DEIN EIGENES TOKEN EINTRAGEN <<<
         // Beispiel: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
         const string BEARER   = "<PHONEBLOCK_API_TOKEN>";
 
@@ -53,7 +52,7 @@ namespace phoneblock_block
         const int HTTP_TIMEOUT_SEC   = 6;       // konservatives Timeout
 
         // Bewertungs-Codes, die als "negativ" gewertet werden (phoneblock Kategorien)
-        // C_PING=Ping-Call, D_POLL=Umfrage, E_ADVERTISING=Werbung, F_GAMBLE=Glücksspiel, G_FRAUD=Betrug
+        // B_MISSED=verpasste Spam-Versuche, C_PING=Ping-Call, D_POLL=Umfrage, E_ADVERTISING=Werbung, F_GAMBLE=Glücksspiel, G_FRAUD=Betrug
         static readonly HashSet<string> NEGATIVE = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         { "B_MISSED","C_PING","D_POLL","E_ADVERTISING","F_GAMBLE","G_FRAUD" };
 
@@ -79,7 +78,7 @@ namespace phoneblock_block
                     return false; // Weiter im Flow (nicht blocken)
                 }
 
-                // Abfrage bei phoneblock.net
+                // Abfrage bei phoneblock.net (probiert mehrere Nummernformate)
                 var (ok, votes, rating, raw) = await LookupAsync(e164);
                 if (!ok)
                 {
@@ -90,17 +89,15 @@ namespace phoneblock_block
                 }
 
                 // Entscheidung: ab MIN_VOTES und negativer Bewertung blocken
-                bool isBlocklisted = votes >= MIN_VOTES && NEGATIVE.Contains(rating);
+                bool isBlocklisted = votes >= MIN_VOTES && NEGATIVE.Contains(rating ?? "");
                 if (isBlocklisted)
                 {
-                    // Ziel "EndCall." parsen und Anruf beenden
-                    if (DestinationStruct.TryParse("EndCall.", out var end))
-                    {
-                        MyCall.Info($"PhoneBlock BLOCK {e164} rating={rating} votes={votes}");
-                        await NotifyAllAsync("blocked", e164, votes, rating, did);
-                        await MyCall.RouteToAsync(end);
-                        return true; // Routing durchgeführt
-                    }
+                    MyCall.Info($"PhoneBlock BLOCK {e164} rating={rating} votes={votes} -> Terminate()");
+                    await NotifyAllAsync("blocked", e164, votes, rating, did);
+
+                    // Sicher und sofort auflegen (keine Route/Parsing-Probleme)
+                    MyCall.Terminate();
+                    return true; // Call wurde final behandelt
                 }
 
                 // Kein Block: Status protokollieren + benachrichtigen (optional)
@@ -121,32 +118,62 @@ namespace phoneblock_block
 
         // ---------------------------
         // API-Lookup bei phoneblock.net
+        // - probiert mehrere Kandidaten (E.164 ohne '+' und DE national '0…')
         // ---------------------------
-        static async Task<(bool ok,int votes,string rating,string raw)> LookupAsync(string e164)
+        async Task<(bool ok,int votes,string rating,string raw)> LookupAsync(string e164)
         {
-            // Beispiel-Endpoint: GET /num/+49123456789?format=json
-            var url = API_BASE + "/num/" + Uri.EscapeDataString(e164) + "?format=json";
+            foreach (var candidate in BuildLookupCandidates(e164))
+            {
+                var url = API_BASE + "/num/" + Uri.EscapeDataString(candidate) + "?format=json";
 
-            using var http = new HttpClient(){ Timeout = TimeSpan.FromSeconds(HTTP_TIMEOUT_SEC) };
+                try
+                {
+                    using var http = new HttpClient(){ Timeout = TimeSpan.FromSeconds(HTTP_TIMEOUT_SEC) };
+                    using var req  = new HttpRequestMessage(HttpMethod.Get, url);
 
-            var req = new HttpRequestMessage(HttpMethod.Get, url);
-            req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", BEARER);
-            req.Headers.Accept.ParseAdd("application/json");
+                    req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", BEARER);
+                    req.Headers.Accept.ParseAdd("application/json");
 
-            var resp = await http.SendAsync(req);
-            var body = await resp.Content.ReadAsStringAsync();
-            if (!resp.IsSuccessStatusCode) return (false,0,"",body);
+                    var resp = await http.SendAsync(req);
+                    var body = await resp.Content.ReadAsStringAsync();
 
-            // Minimales Parsen via Regex (API liefert klein und flach):
-            //   {"votes":5,"rating":"G_FRAUD", ...}
-            int votes = 0; string rating = "";
-            var mVotes  = Regex.Match(body, "\"votes\"\\s*:\\s*(\\d+)");
-            if (mVotes.Success) int.TryParse(mVotes.Groups[1].Value, out votes);
-            var mRating = Regex.Match(body, "\"rating\"\\s*:\\s*\"([^\"]+)\"");
-            if (mRating.Success) rating = mRating.Groups[1].Value;
+                    MyCall.Info($"PhoneBlock LOOKUP try='{candidate}' status={(int)resp.StatusCode}");
 
-            // Erfolg + Rohkörper zurückgeben (raw nur fürs Debug/Log)
-            return (true, votes, rating, body);
+                    if (!resp.IsSuccessStatusCode) continue;
+
+                    // Minimales Parsen via Regex (API liefert klein und flach):
+                    //   {"votes":5,"rating":"G_FRAUD", ...}
+                    int votes = 0; string rating = "";
+                    var mVotes  = Regex.Match(body, "\"votes\"\\s*:\\s*(\\d+)");
+                    if (mVotes.Success) int.TryParse(mVotes.Groups[1].Value, out votes);
+                    var mRating = Regex.Match(body, "\"rating\"\\s*:\\s*\"([^\"]+)\"");
+                    if (mRating.Success) rating = mRating.Groups[1].Value;
+
+                    return (true, votes, rating, body);
+                }
+                catch (Exception ex)
+                {
+                    MyCall.Info($"PhoneBlock LOOKUP EXC try='{candidate}': {ex.Message}");
+                    // weiter mit nächstem Kandidaten
+                }
+            }
+
+            // Kein Kandidat erfolgreich
+            return (false, 0, "", "");
+        }
+
+        // Baut sinnvolle Nummern-Kandidaten aus E.164:
+        //  - E.164 ohne '+' (49…)
+        //  - DE national 0… (aus 49… -> 0…)
+        static IEnumerable<string> BuildLookupCandidates(string e164)
+        {
+            if (string.IsNullOrWhiteSpace(e164)) yield break;
+
+            var plain = e164.StartsWith("+") ? e164.Substring(1) : e164;
+            yield return plain; // 49…
+
+            if (plain.StartsWith("49") && plain.Length > 2)
+                yield return "0" + plain.Substring(2); // 0…
         }
 
         // Benachrichtigt (falls konfiguriert) alle Ziele
@@ -161,14 +188,12 @@ namespace phoneblock_block
         // ---------------------------
         async Task NotifyDiscordAsync(string state, string number, int votes, string rating, string did)
         {
-            // Kein Versand, wenn nicht konfiguriert
             if (string.IsNullOrWhiteSpace(DISCORD_WEBHOOK)) return;
 
             try
             {
                 using var http = new HttpClient(){ Timeout = TimeSpan.FromSeconds(HTTP_TIMEOUT_SEC) };
 
-                // Klartext + Embed vorbereiten
                 string contentText = $"**PhoneBlock** `{state}`\n" +
                                      $"• Nummer: `{number}`\n" +
                                      $"• Votes: `{votes}`\n" +
